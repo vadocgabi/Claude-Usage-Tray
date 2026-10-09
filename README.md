@@ -1,5 +1,13 @@
 # Claude Usage Tray
 
+> **A tiny Windows system-tray app that shows your claude.ai _current session_ and _weekly_ usage limits at a glance.** Unofficial · free · open source · English & Hungarian UI.
+>
+> **Egy apró Windows tálcaprogram, ami egy pillantással mutatja a claude.ai munkamenet- és heti használati korlátodat.**
+
+<p align="center"><img src="docs/preview.png" alt="Claude Usage Tray – tray icon and right-click menu (illustration with sample data)" width="560"></p>
+
+<p align="center"><a href="../../releases/latest"><b>⬇ Download / Letöltés</b></a></p>
+
 **🇭🇺 Magyar** · [🇬🇧 English below](#-english)
 
 ---

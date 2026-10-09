@@ -1,0 +1,10 @@
+﻿Claude Usage Tray 1.0.0
+
+Kis tálcaprogram, amely a claude.ai előfizetésed két használati értékét mutatja folyamatosan:
+
+  •  Aktuális munkamenet (5 órás ablak)
+  •  Heti használat (7 napos ablak)
+
+Első indításkor megnyílik a Beállítások ablak: add meg a szervezeti azonosítót (org_id) és a sessionKey sütit. A kulcsot a program titkosítva, kizárólag a te Windows-fiókodhoz kötve tárolja.
+
+Nem hivatalos program, nincs kapcsolatban az Anthropic-kal. A claude.ai nem dokumentált belső végpontját használja, amely bármikor megváltozhat.

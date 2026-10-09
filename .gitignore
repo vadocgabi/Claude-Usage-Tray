@@ -17,3 +17,5 @@ dist/
 
 # Installer output
 installer/
+app.ico
+installer_*.bmp

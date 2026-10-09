@@ -24,10 +24,19 @@ OutputBaseFilename=ClaudeUsageTray-Setup-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile=installer_side.bmp
+WizardSmallImageFile=installer_small.bmp
+DisableWelcomePage=no
+DisableReadyPage=yes
+ShowLanguageDialog=auto
+VersionInfoVersion={#AppVersion}
+VersionInfoCompany=Vadóc Gábor
+VersionInfoDescription={#AppName} Setup
+VersionInfoCopyright=© 2026 Vadóc Gábor
 
 [Languages]
-Name: "hungarian"; MessagesFile: "compiler:Languages\Hungarian.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "hungarian"; MessagesFile: "compiler:Languages\Hungarian.isl"; InfoBeforeFile: "info_hu.txt"
+Name: "english"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "info_en.txt"
 
 [Tasks]
 Name: "autostart"; Description: "{cm:AutoStart}"; Flags: checkedonce

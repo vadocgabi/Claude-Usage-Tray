@@ -19,3 +19,6 @@ dist/
 installer/
 app.ico
 installer_*.bmp
+
+# Local notes
+reddit_post.md

@@ -1,7 +1,6 @@
 {
-  "org_id": "YOUR-ORGANIZATION-UUID",
-  "session_key": "PASTE-YOUR-sessionKey-COOKIE-VALUE-HERE",
-  "cf_clearance": "",
-  "interval_seconds": 60,
-  "icon_mode": "both"
+  "auth_mode": "auto",
+  "org_id": "YOUR-ORGANIZATION-UUID (cookie mode only)",
+  "session_key": "PASTE-YOUR-sessionKey-COOKIE-VALUE-HERE (cookie mode only)",
+  "cf_clearance": ""
 }

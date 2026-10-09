@@ -1,168 +1,54 @@
-# Claude Usage Tray – projektleírás
+# Claude Usage Tray – fejlesztői leírás
 
-> Ez a fájl a fejlesztéshez készült (VS Code / Claude Code). A cél: a meglévő Python-programból **futtatható (.exe) Windows-alkalmazást** készíteni. Ha Claude Code-dal dolgozol, átnevezheted `CLAUDE.md`-re, hogy automatikusan beolvassa.
+Windows tálcaprogram, ami a **claude.ai** előfizetés használati korlátait mutatja. Felhasználói leírás: `README.md`. Ez a fájl a fejlesztőknek (és a Claude Code-nak) szól.
 
-## 1. Mit csinál a program
+## Működés röviden
 
-Windows 11 tálcaikon (system tray), ami a **claude.ai** előfizetés két használati értékét mutatja, folyamatosan frissítve:
+- **Adatforrások** (`claude_usage/sources.py`), mindkettő nem dokumentált, belső végpont:
+  - **OAuth:** `GET https://api.anthropic.com/api/oauth/usage`, fejlécek: `Authorization: Bearer <token>`, `anthropic-beta: oauth-2025-04-20`. A token a Claude Code bejelentkezéséből jön: Windows Credential Manager (`Claude Code-credentials`), majd `~/.claude/.credentials.json` (`CLAUDE_CONFIG_DIR` felülírhatja). **A tokent csak olvassuk, soha nem frissítjük** (a forgatás kijelentkeztetné a Claude Code-ot). Lejárt tokennél nem hívunk, a felhasználó nyissa meg a Claude Code-ot.
+  - **Süti:** `GET https://claude.ai/api/organizations/<org_id>/usage`, `sessionKey` sütivel, `curl_cffi` + `impersonate="chrome"` (Cloudflare miatt).
+  - **Auth mód:** `auto` (OAuth, ha van, különben süti) / `oauth` / `cookie`. 429-nél nem próbáljuk a másik végpontot.
+- **Egységes értelmező:** `parse_usage()` mindkét válaszból `Usage` objektumot készít (`five_hour`/`seven_day`, `seven_day_sonnet|opus`, `limits[]` `weekly_scoped`, `extra_usage`, `seven_day_breakdown`). A `utilization` már százalék, **nem szabad** „tört vagy százalék” heurisztikát bevezetni (az 1.0 = 1%).
+- **Elemzés** (`insights.py`): tempó (az időablak hány %-a telt el), előrejelzés (mikor éri el a 100%-ot, ha a reset előtt), `AlertTracker` (80/90/100% küszöb, hiszterézis, ablakonként egyszer, reset-értesítés, első olvasásnál nem szól), `poll_delay` (jitter, `Retry-After` back-off, a reset utánra időzítés).
+- **Helyi statisztika** (`localstats.py`): `~/.claude/projects/**/*.jsonl`, üzenet-azonosító szerinti deduplikálás (a legnagyobb tokenszám nyer), fájlonkénti gyorsítótár. Token = input + output + cache creation (cache read nélkül). Költséget szándékosan nem becslünk (az árlista elavulna).
 
-- **Current session** (5 órás ablak) → API: `five_hour.utilization`
-- **This week** (7 napos ablak) → API: `seven_day.utilization`
+## Fájlok
 
-Megjelenítés:
+| Fájl | Szerep |
+|---|---|
+| `claude_usage_tray.py` | belépési pont (PyInstaller ezt építi) |
+| `claude_usage/` | a program csomagja (lásd lent) |
+| `tests/test_core.py` | egységtesztek (`python -m unittest discover tests`) |
+| `build.bat` | tesztek + PyInstaller exe + Inno Setup telepítő + SHA256 |
+| `installer.iss`, `info_hu.txt`, `info_en.txt` | Inno Setup telepítő (Program Files, HU/EN) |
+| `make_icon.py` | `app.ico` + a telepítő képei (generált, nem commitoljuk) |
+| `version_info.txt` | az exe verzióinformációja |
+| `config.json` | **titkos**: org_id, kulcsok (DPAPI), auth mód. Soha nem kerül Git-be |
 
-- Az ikon két színes sáv: felül a session, alul a hét százaléka (`icon_mode: "both"`), vagy egyetlen szám (`"session"`). Szín: kék < 70%, narancs ≥ 70%, piros ≥ 90%, szürke „!” ha még nincs adat.
-- Tooltip: `Munkamenet: 25% | Hét: 24%` / `Session: 25% | Week: 24%`
-- Jobb gombos menü: session sor + visszaállási idő, heti sor + visszaállási idő, frissítés ideje (hiba esetén hibaüzenet is), **Frissítés most**, **Usage oldal megnyitása**, **Nyelv / Language** (rádiógombok: Magyar / English), **Kilépés**.
-- Kétnyelvű (hu/en) felület, a választás a `settings.json`-ban marad meg. Első indításkor a Windows UI nyelvét követi (magyar → `hu`, különben `en`).
-- Hiba esetén az utolsó jó érték marad látható, a tooltip jelzi a hibát.
+Modulok: `sources` (adatforrások, hiba: `UsageError(key, arg, retry_after)`), `model` (`Limit`, `Usage`, `Snapshot`), `insights`, `localstats`, `config` (config.json + settings.json), `dpapi`, `i18n` (HU/EN, kulcsok azonosak, ezt teszt őrzi), `fmt`, `icon`, `autostart`, `updates` (kézi frissítés-ellenőrzés), `ui_common` (design tokenek, világos/sötét, `Bar`), `ui_details` (flyout), `ui_settings`, `app` (tálca + munkaszál), `cli`.
 
-## 2. Fájlok
+## Konvenciók
 
-| Fájl | Szerep | Git |
-|---|---|---|
-| `claude_usage_tray.py` | a teljes program (egyetlen fájl) | igen |
-| `config.example.json` | konfigurációs sablon | igen |
-| `config.json` | **valódi konfig, benne a `sessionKey` süti – titok!** | **soha** |
-| `settings.json` | menüből választott nyelv (automatikusan jön létre) | nem |
-| `requirements.txt` | `pystray`, `pillow`, `curl_cffi` | igen |
-| `README.md` | felhasználói leírás (HU + EN) | igen |
-| `PROJECT.md` | ez a fejlesztői leírás | igen |
-| `.gitignore` | kizárja a `config.json`-t, `settings.json`-t, build kimenetet | igen |
+- Hibák **kulcsként** tárolódnak (`UsageError.key`), így nyelvváltáskor újrafordíthatók. Új szöveg: mindkét nyelven, az `i18n.STRINGS`-ben.
+- A tkinter ablakok **saját szálban** futnak (a főszál a `pystray`). Egyszerre egy ablak/fajta.
+- Adatok az exe-nél `%APPDATA%\ClaudeUsageTray`, forrásból futtatva a projektmappa.
+- pystray menüelem-visszahívások pontosan 2 paraméteresek legyenek (nem lehet alapértelmezett argumentum, zárványt használj).
 
-## 3. Adatforrás (nem hivatalos, nem dokumentált!)
-
-A claude.ai webes Usage oldala ezt a belső végpontot hívja:
-
-```
-GET https://claude.ai/api/organizations/<org_id>/usage
-```
-
-Hitelesítés: a böngésző `sessionKey` sütije (`sk-ant-sid02-...`). Opcionálisan `cf_clearance` is kellhet, ha a Cloudflare blokkol (HTTP 403).
-
-A program a `curl_cffi` csomaggal, `impersonate="chrome"` beállítással hívja (böngésző TLS-ujjlenyomat, mert a sima `requests`-et a Cloudflare valószínűleg blokkolná).
-
-Fontosabb fejlécek: `accept: */*`, `content-type: application/json`, `anthropic-client-platform: web_claude_ai`, `referer: https://claude.ai/settings/usage`.
-
-### A válasz (releváns része, lerövidítve)
-
-```json
-{
-  "five_hour": { "utilization": 25.0, "resets_at": "2026-10-09T17:20:00.606556+00:00" },
-  "seven_day": { "utilization": 24.0, "resets_at": "2026-10-12T20:00:00.606575+00:00" },
-  "limits": [
-    { "kind": "session",    "group": "session", "percent": 25, "resets_at": "...", "is_active": true },
-    { "kind": "weekly_all", "group": "weekly",  "percent": 24, "resets_at": "...", "is_active": false }
-  ],
-  "seven_day_breakdown": { "rows": [ { "key": "claude_code", "display_name": "Claude Code", "percent": 75 } ] }
-}
-```
-
-- A `fetch_usage()` először a `five_hour` / `seven_day` objektumot nézi, ha ott `null`, akkor a `limits[]` tömbből veszi (`kind == "session"` / `"weekly_all"`).
-- Az `utilization` lebegőpontos (`25.0`), a program egészre kerekít.
-- Az időpontok UTC-ben jönnek (`resets_at`), a program helyi időre alakítja.
-- Sok más mező `null` (pl. `seven_day_opus`); a `seven_day_breakdown` a heti használat megoszlását adja (Claude Code / Chats / Cowork) – jelenleg nem használt, jövőbeli bővítési lehetőség.
-
-## 4. Konfiguráció (`config.json`)
-
-| Mező | Jelentés | Alapérték |
-|---|---|---|
-| `org_id` | szervezeti azonosító (UUID az API URL-ből) | – |
-| `session_key` | `sessionKey` süti értéke | – |
-| `cf_clearance` | opcionális Cloudflare süti | `""` |
-| `interval_seconds` | frissítési időköz (min. 15) | `60` |
-| `icon_mode` | `"both"` vagy `"session"` | `"both"` |
-| `language` | opcionális `"hu"`/`"en"` (a `settings.json` felülírja) | rendszernyelv |
-
-Nyelvválasztás sorrendje: `settings.json` → `config.json["language"]` → Windows UI nyelv.
-
-## 5. Felépítés (`claude_usage_tray.py`)
-
-- **`STRINGS` / `LANGS`** – a teljes UI szövegkészlete `hu` és `en` nyelven (kulcsok mindkét nyelven azonosak). Új nyelv: új kulcs a két szótárban + a `LANGS`-ban.
-- **`detect_system_language()`, `load_language()`, `save_language()`** – nyelv felismerése és mentése.
-- **`set_autostart(enable)`** – a Windows Registry `HKCU\...\Run` kulcsába ír (`--autostart` / `--no-autostart` parancssori kapcsoló).
-- **`UsageError(key, arg)`** – fordítható hiba: a hiba **kulcsként** tárolódik, így nyelvváltáskor azonnal újrafordítódik a menüben.
-- **`fetch_usage(cfg)`** – a lekérés és a JSON-értelmezés, `{"s", "s_reset", "w", "w_reset"}` szótárat ad vissza.
-- **`make_icon(state, mode)`** – a 64×64-es ikon rajzolása Pillow-val (Arial Bold / Segoe UI Bold betűtípus a Windows-ból, fallback: Pillow alapfont).
-- **`App`** – a tálcaikon (`pystray.Icon`), a menü (hívható szövegekkel, így nyelvváltáskor újrarajzolódik), a háttérszál (`worker`: lekérés → `wake.wait(interval)`), a „Frissítés most” az `Event`-tel ébreszti a szálat.
-
-Szálkezelés: a fő szál a `pystray` eseményhurka, a lekérés egy `daemon` szálban fut.
-
-## 6. Fejlesztői környezet
+## Build
 
 ```
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy config.example.json config.json   # majd töltsd ki
-python claude_usage_tray.py            # konzollal, hibakereséshez
-pythonw claude_usage_tray.py           # konzol nélkül
+pip install -r requirements.txt pyinstaller
+build.bat        # dist\ClaudeUsageTray.exe, installer\ClaudeUsageTray-Setup-1.0.0.exe
 ```
 
-Minimális Python: 3.9 (a fájl elején `from __future__ import annotations` van, így a `str | None` jelölés régebbi Pythonon is működik).
+Az exe-hez `--collect-all curl_cffi` és `--hidden-import pystray._win32` kell. A telepítőhöz Inno Setup 6 (`winget install JRSoftware.InnoSetup`).
 
-## 7. FELADAT: futtatható (.exe) verzió
+## Biztonsági szabályok
 
-Cél: egy `ClaudeUsageTray.exe`, ami Python telepítése nélkül fut, tálcaikonnal, konzolablak nélkül.
+- A kulcsot és a tokent **soha** nem naplózzuk, nem írjuk ki, nem csomagoljuk az exe-be, nem commitoljuk.
+- Hálózat: csak `api.anthropic.com` / `claude.ai`; `api.github.com` kizárólag a „Frissítések keresése” kattintásra.
+- A projekt **nem hivatalos**, nincs kapcsolatban az Anthropic-kal.
 
-### 7.1 Javasolt build (PyInstaller)
+## Ötletek a későbbi verziókhoz
 
-```
-pip install pyinstaller
-pyinstaller --onefile --noconsole --name ClaudeUsageTray ^
-  --collect-all curl_cffi --hidden-import pystray._win32 ^
-  --icon app.ico claude_usage_tray.py
-```
-
-- A `curl_cffi` natív könyvtárat (libcurl-impersonate) tartalmaz → `--collect-all curl_cffi` kell.
-- A `pystray` a Windows-backendet dinamikusan tölti → `--hidden-import pystray._win32`.
-- Ha a `--onefile` kibontása lassú vagy a víruskereső téves riasztást ad, használj `--onedir` kimenetet, és csomagold telepítővé (Inno Setup).
-
-### 7.2 Kötelezően javítandó a kódban (frozen mód)
-
-1. **`BASE` útvonal.** Jelenleg `Path(__file__).resolve().parent`. `--onefile` esetén ez egy ideiglenes `_MEI...` mappa → a `config.json` és `settings.json` ott nem található. Javítás:
-   ```python
-   BASE = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
-   ```
-2. **Autostart.** A `set_autostart()` most `pythonw.exe + script` parancsot ír a Registry-be. Frozen módban csak az exe kell:
-   ```python
-   cmd = f'"{sys.executable}"' if getattr(sys, "frozen", False) else f'"{pyw}" "{Path(__file__).resolve()}"'
-   ```
-3. **Hiányzó `config.json`.** Jelenleg kivétellel leáll. Legyen barátságos kezelés (lásd 7.3).
-4. **Egy példány.** Védd named mutexszel (`ctypes.windll.kernel32.CreateMutexW`), hogy ne indulhasson kétszer.
-
-### 7.3 Ajánlott fejlesztések az exe-hez
-
-- **Első indítás varázsló** (`tkinter` ablak): bekéri az `org_id`-t és a `sessionKey`-t, ellenőrzi egy próbalekéréssel, majd menti. Így nem kell kézzel `config.json`-t szerkeszteni.
-- **A süti biztonságos tárolása**: ne sima szövegben. Lehetőségek: Windows Credential Manager (`keyring` csomag) vagy DPAPI (`win32crypt.CryptProtectData`).
-- **Menüpont „Indítás a Windows-szal”** (pipálható), a `--autostart` kapcsoló helyett/mellett.
-- **Frissítési időköz és ikonmód a menüből** állítható (mentés a `settings.json`-ba).
-- **Értesítés** (Windows toast) 80% / 90% átlépésekor.
-- **Ikon olvashatóság**: a tálcaikon 16×16–32×32 px-en jelenik meg; ellenőrizd Windows 11-en több DPI-n, szükség esetén egyszerűsítsd (nagyobb/vastagabb számok).
-- **`app.ico`** az exe-hez (a tálcaikon továbbra is dinamikusan rajzolt).
-- **Naplózás** fájlba (de **soha ne naplózd a sütit**), hibakereséshez.
-- Opcionálisan GitHub Actions workflow, ami Windows-on buildel és a Releases alá teszi az exe-t.
-
-## 8. Ismert korlátok és kockázatok
-
-- A végpont **nem hivatalos és nem dokumentált**; az Anthropic bármikor megváltoztathatja. Ha a válasz szerkezete változik, a program „Ismeretlen válaszformátum” hibát jelez (`err_format`).
-- A `sessionKey` idővel lejár → `HTTP 401/403`, a program „!” ikont mutat (ha még nem volt sikeres lekérés), vagy az utolsó jó értéket + hibajelzést. Megoldás: új süti beírása.
-- A Cloudflare blokkolhat → `cf_clearance` süti hozzáadása; ha így sem megy, alternatíva: böngészőbővítmény, ami a bejelentkezett oldalról olvassa ki az adatot, és egy helyi (localhost) tálcaprogramnak küldi.
-- A claude.ai felhasználási feltételeinek betartása a felhasználó felelőssége; a projekt **nem hivatalos**, nincs kapcsolatban az Anthropic-kal.
-
-## 9. Biztonsági szabályok (fejlesztéshez)
-
-- A `config.json` **soha nem kerülhet Git-be**, és exe-be sem szabad belecsomagolni a sütit.
-- A sütit ne írd ki konzolra/naplóba, és hibajelentésben se szerepeljen.
-- Ha egy süti kiszivárgott: Claude → Settings → Account → kijelentkezés az összes eszközről.
-
-## 10. Kész prompt VS Code-hoz / Claude Code-hoz
-
-```
-Olvasd el a PROJECT.md-t és a claude_usage_tray.py-t. Készíts belőle futtatható
-Windows exe-t PyInstallerrel a 7. fejezet szerint: javítsd a BASE útvonalat és az
-autostartot frozen módra, add hozzá az egypéldányos védelmet és egy első indítási
-beállító ablakot (org_id + sessionKey, próbalekéréssel), majd írj build.bat-ot, ami
-létrehozza a dist\ClaudeUsageTray.exe fájlt. A sütit ne naplózd és ne csomagold az
-exe-be. A felület maradjon kétnyelvű (hu/en).
-```
+Több fiók (`--config-dir`), kompakt lebegő widget, eseményparancsok (script futtatás küszöbnél), kódaláírás (SignPath Foundation), költségbecslés külön, frissíthető árlistával.

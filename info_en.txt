@@ -1,10 +1,11 @@
 ﻿Claude Usage Tray 1.0.0
 
-A small tray app that continuously shows two usage values of your claude.ai subscription:
+A tray app that continuously shows the usage limits of your claude.ai subscription:
 
-  •  Current session (5-hour window)
-  •  Weekly usage (7-day window)
+  •  Current session (5-hour window) and weekly usage
+  •  Per-model limits, pace marker and forecast
+  •  Notifications when thresholds are crossed
 
-On first launch the Settings window opens: enter your organization ID (org_id) and the sessionKey cookie. The key is stored encrypted and bound to your Windows account only.
+Authentication: it uses your Claude Code sign-in (OAuth), or you can enter the claude.ai cookie in Settings. The key is stored encrypted and bound to your Windows account only.
 
-Unofficial software, not affiliated with Anthropic. It uses an undocumented internal claude.ai endpoint that may change at any time.
+Unofficial software, not affiliated with Anthropic. It uses an undocumented internal endpoint that may change at any time.

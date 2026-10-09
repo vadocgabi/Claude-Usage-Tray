@@ -1,0 +1,7 @@
+{
+  "org_id": "YOUR-ORGANIZATION-UUID",
+  "session_key": "PASTE-YOUR-sessionKey-COOKIE-VALUE-HERE",
+  "cf_clearance": "",
+  "interval_seconds": 60,
+  "icon_mode": "both"
+}

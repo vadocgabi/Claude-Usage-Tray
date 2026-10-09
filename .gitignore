@@ -1,0 +1,19 @@
+# Secrets – never commit
+config.json
+
+# Local user settings (chosen language)
+settings.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build output (PyInstaller)
+build/
+dist/
+*.spec
+
+# Installer output
+installer/

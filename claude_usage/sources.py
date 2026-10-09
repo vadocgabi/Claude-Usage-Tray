@@ -187,7 +187,7 @@ def parse_usage(data: dict, source: str = "", plan: str = "") -> Usage:
 
     rows = (data.get("seven_day_breakdown") or {}).get("rows") or []
     usage.breakdown = [(str(r.get("display_name") or r.get("key")), float(r["percent"]))
-                       for r in rows if isinstance(r, dict) and r.get("percent") is not None]
+                       for r in rows if isinstance(r, dict) and r.get("percent")]  # zero shares are noise
     return usage
 
 

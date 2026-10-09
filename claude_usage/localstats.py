@@ -64,12 +64,13 @@ def parse_log(path: Path) -> dict:
                 if not isinstance(message, dict) or not isinstance(message.get("usage"), dict):
                     continue
                 moment = parse_iso(entry.get("timestamp"))
-                if moment is None:
+                model = message.get("model")
+                if moment is None or (model or "").startswith("<"):  # '<synthetic>' = client-side message
                     continue
                 key = message.get("id") or entry.get("uuid") or f"{path.name}:{moment.isoformat()}"
                 tokens = _entry_tokens(message["usage"])
                 if key not in found or tokens > found[key][2]:
-                    found[key] = (moment, short_model(message.get("model")), tokens, entry.get("sessionId"))
+                    found[key] = (moment, short_model(model), tokens, entry.get("sessionId"))
     except OSError:
         pass
     return found

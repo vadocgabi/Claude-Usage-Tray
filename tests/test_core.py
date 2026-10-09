@@ -52,6 +52,11 @@ class ParseUsageTests(unittest.TestCase):
                             "scope": {"model": {"display_name": "sonnet"}}}]}
         self.assertEqual(len(parse_usage(data).models), 1)
 
+    def test_zero_share_rows_are_dropped(self):
+        data = {"five_hour": {"utilization": 1}, "seven_day_breakdown": {"rows": [
+            {"display_name": "Claude Code", "percent": 75}, {"display_name": "Other", "percent": 0}]}}
+        self.assertEqual(parse_usage(data).breakdown, [("Claude Code", 75.0)])
+
     def test_unusable_response_raises(self):
         for bad in ({}, {"unrelated": 1}, [], None):
             with self.assertRaises(UsageError):
@@ -191,6 +196,12 @@ class LocalStatsTests(unittest.TestCase):
             self.assertEqual(stats.today, 115)
             self.assertEqual(stats.week, 115 + 1015)
             self.assertEqual(stats.top_models[0][0], "Sonnet 4.6")
+
+    def test_synthetic_messages_are_ignored(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "a.jsonl"
+            self.write(path, [self.assistant("m1", 50, NOW, model="<synthetic>")])
+            self.assertEqual(parse_log(path), {})
 
     def test_missing_directory(self):
         self.assertIsNone(LocalStats(Path("does-not-exist")).scan(NOW))

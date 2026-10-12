@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Usage Tray
+GenericName=Usage monitor
+Comment=Shows your claude.ai session and weekly usage limits in the system tray
+Comment[hu]=A claude.ai munkamenet- és heti használati korlátait mutatja a tálcán
+Exec=claude-usage-tray
+Icon=claude-usage-tray
+Terminal=false
+Categories=Utility;Monitor;
+Keywords=claude;usage;limit;tray;anthropic;
+StartupNotify=false

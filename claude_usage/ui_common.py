@@ -1,14 +1,17 @@
-"""Shared UI building blocks: design tokens, Windows theme detection and flat widgets (tkinter)."""
+"""Shared UI building blocks: design tokens, desktop theme detection and flat widgets (tkinter)."""
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes
+import base64
+import io
 import tkinter as tk
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-FONT = "Segoe UI Variable Text"
-FONT_FALLBACK = "Segoe UI"
+from . import system
+
+# First installed family wins: Windows, then the common Linux desktop fonts.
+FONT_FAMILIES = ("Segoe UI Variable Text", "Segoe UI", "Inter", "Noto Sans", "Cantarell", "Ubuntu",
+                 "DejaVu Sans", "Liberation Sans", "Helvetica", "Arial")
 
 
 @dataclass(frozen=True)
@@ -37,14 +40,8 @@ LIGHT = Theme("light", bg="#f4f4f7", card="#ffffff", border="#e2e2e9", text="#16
 
 
 def current_theme() -> Theme:
-    """Follows the Windows 'app mode' setting."""
-    try:
-        import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
-            return LIGHT if winreg.QueryValueEx(key, "AppsUseLightTheme")[0] else DARK
-    except OSError:
-        return LIGHT
+    """Follows the desktop's dark/light preference."""
+    return DARK if system.prefers_dark() else LIGHT
 
 
 def usage_color(theme: Theme, pct: float) -> str:
@@ -55,29 +52,38 @@ def usage_color(theme: Theme, pct: float) -> str:
     return theme.ok
 
 
+_family: Optional[str] = None
+
+
 def font(root: tk.Misc, size: int = 10, bold: bool = False) -> tuple:
-    families = set(root.tk.call("font", "families"))
-    family = FONT if FONT in families else FONT_FALLBACK
-    return (family, size, "bold" if bold else "normal")
+    global _family
+    if _family is None:
+        installed = set(root.tk.call("font", "families"))
+        _family = next((name for name in FONT_FAMILIES if name in installed), "TkDefaultFont")
+    return (_family, size, "bold" if bold else "normal")
 
 
 def style_window(window: tk.Misc, theme: Theme) -> None:
-    """Dark title bar and rounded corners on Windows 10/11 (silently ignored where unsupported)."""
+    """Native window styling where the platform supports it (dark title bar and rounded corners)."""
+    system.style_window(window, theme.name == "dark")
+
+
+def work_area(window: Optional[tk.Misc] = None) -> tuple:
+    """(left, top, right, bottom) of the screen area not covered by panels or the taskbar."""
+    return system.work_area(window)
+
+
+def set_window_icon(window: tk.Misc) -> None:
+    """The tray icon artwork as the window icon (taskbar / title bar)."""
     try:
-        window.update_idletasks()
-        hwnd = ctypes.windll.user32.GetParent(window.winfo_id()) or window.winfo_id()
-        dwm = ctypes.windll.dwmapi
-        for attribute, value in ((20, int(theme.name == "dark")), (33, 2)):  # dark mode, round corners
-            dwm.DwmSetWindowAttribute(hwnd, attribute, ctypes.byref(ctypes.c_int(value)), 4)
-    except (OSError, AttributeError):
+        from .icon import make_icon
+        buffer = io.BytesIO()
+        make_icon(None, "both").save(buffer, "PNG")
+        image = tk.PhotoImage(data=base64.b64encode(buffer.getvalue()))
+        window.iconphoto(True, image)
+        window._icon_image = image   # keep a reference, Tk does not
+    except Exception:
         pass
-
-
-def work_area() -> tuple:
-    """(left, top, right, bottom) of the screen area not covered by the taskbar."""
-    rect = ctypes.wintypes.RECT()
-    ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(rect), 0)  # SPI_GETWORKAREA
-    return rect.left, rect.top, rect.right, rect.bottom
 
 
 class Bar(tk.Canvas):

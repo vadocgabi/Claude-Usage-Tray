@@ -1,8 +1,6 @@
 """Hungarian / English UI strings and language selection."""
 from __future__ import annotations
 
-import ctypes
-
 from . import AUTHOR, YEAR, __version__
 
 LANGS = {"hu": "Magyar", "en": "English"}
@@ -24,6 +22,7 @@ STRINGS = {
         "open_page": "Usage oldal megnyitása",
         "settings": "Beállítások...",
         "autostart": "Indítás a Windows-szal",
+        "autostart_session": "Indítás bejelentkezéskor",
         "notifications": "Értesítések",
         "interval": "Frissítési időköz",
         "minutes": "{n} perc",
@@ -68,6 +67,7 @@ STRINGS = {
         "d_tokens": "Claude Code tokenek (helyi napló)",
         "d_tokens_line": "Ma: {today}  ·  7 nap: {week}",
         "d_stale": "régi adat",
+        "d_no_tray": "Nem található tálcaterület. GNOME-on telepítsd az „AppIndicator” bővítményt, hogy az ikon megjelenjen.",
         "src_oauth": "Forrás: Claude Code (OAuth)",
         "src_cookie": "Forrás: claude.ai (süti)",
         # settings window
@@ -87,6 +87,7 @@ STRINGS = {
         "set_show": "Kulcsok megjelenítése",
         "set_help": "Hol találom? (Usage oldal megnyitása)",
         "set_hint": "F12 → Network → a „usage” kérés URL-je tartalmazza az org_id-t; Application → Cookies → sessionKey. A kulcsot a program titkosítva (Windows DPAPI) menti.",
+        "set_hint_linux": "F12 → Network → a „usage” kérés URL-je tartalmazza az org_id-t; Application → Cookies → sessionKey. A kulcsot a program az asztali kulcstartóban tárolja (ha nincs, csak a te felhasználód által olvasható fájlban).",
         "set_test": "Kipróbálás",
         "set_save": "Mentés",
         "set_cancel": "Mégse",
@@ -111,6 +112,7 @@ STRINGS = {
         "open_page": "Open Usage page",
         "settings": "Settings...",
         "autostart": "Start with Windows",
+        "autostart_session": "Start at login",
         "notifications": "Notifications",
         "interval": "Refresh interval",
         "minutes": "{n} min",
@@ -155,6 +157,7 @@ STRINGS = {
         "d_tokens": "Claude Code tokens (local logs)",
         "d_tokens_line": "Today: {today}  ·  7 days: {week}",
         "d_stale": "stale data",
+        "d_no_tray": "No system tray found. On GNOME install the \"AppIndicator\" extension to see the tray icon.",
         "src_oauth": "Source: Claude Code (OAuth)",
         "src_cookie": "Source: claude.ai (cookie)",
         # settings window
@@ -174,6 +177,7 @@ STRINGS = {
         "set_show": "Show keys",
         "set_help": "Where do I find it? (open Usage page)",
         "set_hint": "F12 → Network → the “usage” request URL contains the org_id; Application → Cookies → sessionKey. The key is stored encrypted (Windows DPAPI).",
+        "set_hint_linux": "F12 → Network → the “usage” request URL contains the org_id; Application → Cookies → sessionKey. The key is kept in the desktop keyring (or, without one, in a file only your user can read).",
         "set_test": "Test",
         "set_save": "Save",
         "set_cancel": "Cancel",
@@ -201,12 +205,9 @@ def credit_text(lang: str) -> str:
 
 
 def detect_system_language() -> str:
-    """'hu' on a Hungarian Windows UI, otherwise 'en'."""
-    try:
-        lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-        return "hu" if (lang_id & 0x3FF) == HUNGARIAN_LANGID else "en"
-    except (OSError, AttributeError):
-        return "en"
+    """'hu' on a Hungarian system, otherwise 'en'."""
+    from . import system
+    return system.system_language()
 
 
 def resolve_language(chosen: str) -> str:

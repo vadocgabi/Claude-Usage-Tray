@@ -1,0 +1,6 @@
+pystray>=0.19
+pillow>=10
+curl_cffi>=0.7
+python-xlib>=0.33
+jeepney>=0.8
+keyring>=24

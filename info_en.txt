@@ -1,4 +1,4 @@
-﻿Claude Usage Tray 1.0.0
+﻿Claude Usage Tray 1.1.0
 
 A tray app that continuously shows the usage limits of your claude.ai subscription:
 

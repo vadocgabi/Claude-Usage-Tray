@@ -9,15 +9,17 @@ from . import fmt
 from .i18n import STRINGS, tr, units
 from .insights import pace_pct, seconds_to_limit
 from .model import Limit
-from .ui_common import (Bar, button, card, current_theme, font, label, style_window, usage_color,
-                        work_area)
+from . import system
+from .ui_common import (Bar, button, card, current_theme, font, label, set_window_icon, style_window,
+                        usage_color, work_area)
 
 WIDTH = 400
 POLL_MS = 1000
 
 
 class DetailsWindow:
-    """Borderless card that closes on focus loss, like a Windows 11 flyout."""
+    """Windows: a borderless card that closes on focus loss, like a Windows 11 flyout.
+    Linux: a small regular window (window managers disagree about borderless popups)."""
 
     def __init__(self, app, on_settings: Callable, on_refresh: Callable):
         self.app, self.on_settings, self.on_refresh = app, on_settings, on_refresh
@@ -28,13 +30,22 @@ class DetailsWindow:
         theme = self.theme
         self.root = root = tk.Tk()
         root.withdraw()
-        root.overrideredirect(True)
+        self.borderless = system.FLYOUT_BORDERLESS
+        if self.borderless:
+            root.overrideredirect(True)
+            root.configure(bg=theme.border)
+            self.body = tk.Frame(root, bg=theme.bg, padx=14, pady=14)
+            self.body.pack(padx=1, pady=1, fill="both")
+            root.bind("<FocusOut>", lambda event: root.after(150, self._close_if_unfocused))
+        else:
+            root.title(tr(self.app.lang, "title"))
+            root.resizable(False, False)
+            root.configure(bg=theme.bg)
+            set_window_icon(root)
+            self.body = tk.Frame(root, bg=theme.bg, padx=14, pady=14)
+            self.body.pack(fill="both")
         root.attributes("-topmost", True)
-        root.configure(bg=theme.border)
-        self.body = tk.Frame(root, bg=theme.bg, padx=14, pady=14)
-        self.body.pack(padx=1, pady=1, fill="both")
         root.bind("<Escape>", lambda event: root.destroy())
-        root.bind("<FocusOut>", lambda event: root.after(150, self._close_if_unfocused))
         self._refresh_view()
         root.deiconify()
         style_window(root, theme)
@@ -59,9 +70,13 @@ class DetailsWindow:
 
     def _place(self) -> None:
         self.root.update_idletasks()
-        _, _, right, bottom = work_area()
+        left, top, right, bottom = work_area(self.root)
         height = self.root.winfo_reqheight()
-        self.root.geometry(f"{WIDTH}x{height}+{right - WIDTH - 12}+{bottom - height - 12}")
+        x = right - WIDTH - 12
+        # next to the panel: bottom-right above a bottom panel / taskbar, top-right below a top panel
+        top_panel = top > 0 and (bottom == self.root.winfo_screenheight() or top > 24)
+        y = top + 12 if top_panel and not self.borderless else bottom - height - 12
+        self.root.geometry(f"{WIDTH}x{height}+{max(left, x)}+{max(top, y)}")
 
     # ------------------------------------------------------------ rendering
     def _render(self) -> None:
@@ -134,7 +149,8 @@ class DetailsWindow:
                               at=fmt.local_time(limit.resets_at, limit.window_hours == 168, STRINGS[lang]["days"])))
         if pace is not None:
             details.append(tr(lang, "d_pace", p=f"{pace:.0f}"))
-        label(box, theme, "  ·  ".join(details), 9, muted=True).pack(anchor="w")
+        label(box, theme, "  ·  ".join(details), 9, muted=True, wraplength=WIDTH - 64,
+              justify="left").pack(anchor="w")
 
         eta = seconds_to_limit(limit, now)
         if eta is not None and limit.key in ("session", "weekly") and limit.pct < 100:
@@ -186,6 +202,9 @@ class DetailsWindow:
                          wraplength=WIDTH - 40, justify="left")
             warn.configure(fg=theme.warn)
             warn.pack(anchor="w", pady=(0, 8))
+        if getattr(self.app, "no_tray", False):
+            label(self.body, theme, tr(lang, "d_no_tray"), 8, muted=True, bg=theme.bg, wraplength=WIDTH - 40,
+                  justify="left").pack(anchor="w", pady=(0, 8))
         row = tk.Frame(self.body, bg=theme.bg)
         row.pack(fill="x")
         button(row, theme, tr(lang, "refresh"), self.on_refresh, bg=theme.bg).pack(side="left")

@@ -4,11 +4,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from . import dpapi
+from . import system
 from .paths import CONFIG_PATH, SETTINGS_PATH
 
 AUTH_MODES = ("auto", "oauth", "cookie")
-ICON_MODES = ("both", "session")
+ICON_MODES = ("both", "session", "weekly")
 INTERVALS = (60, 120, 300, 600, 900)  # seconds offered in the tray menu
 MIN_INTERVAL = 60
 
@@ -42,7 +42,7 @@ def load_config(config_path: Path = CONFIG_PATH, settings_path: Path = SETTINGS_
     cfg.update(_read_json(config_path))
     cfg.update({k: v for k, v in _read_json(settings_path).items() if k in PREFERENCE_KEYS})
     for key in SECRET_KEYS:
-        cfg[key] = dpapi.decrypt(cfg.get(key, ""))
+        cfg[key] = system.unprotect(cfg.get(key, ""))
     if cfg["auth_mode"] not in AUTH_MODES:
         cfg["auth_mode"] = "auto"
     if cfg["icon_mode"] not in ICON_MODES:
@@ -56,8 +56,12 @@ def save_credentials(cfg: dict, config_path: Path = CONFIG_PATH) -> None:
     stored = _read_json(config_path)
     for key in CREDENTIAL_KEYS:
         value = cfg.get(key, "")
-        stored[key] = dpapi.encrypt(value) if key in SECRET_KEYS else value
+        stored[key] = system.protect(key, value) if key in SECRET_KEYS else value
     config_path.write_text(json.dumps(stored, indent=2), encoding="utf-8")
+    try:
+        config_path.chmod(0o600)  # owner only (no effect on Windows, where DPAPI protects the secrets)
+    except OSError:
+        pass
 
 
 def save_preferences(cfg: dict, settings_path: Path = SETTINGS_PATH) -> None:

@@ -1,16 +1,21 @@
 # Claude Usage Tray
 
-> **A Windows tray app that shows your claude.ai _current session_ and _weekly_ usage limits at a glance.** Unofficial · free · open source · English & Hungarian UI.
+> **A Windows and Linux tray app that shows your claude.ai _current session_ and _weekly_ usage limits at a glance.** Unofficial · free · open source · English & Hungarian UI.
 >
-> **Windows tálcaprogram, ami egy pillantással mutatja a claude.ai munkamenet- és heti használati korlátodat.**
+> **Windows és Linux tálcaprogram, ami egy pillantással mutatja a claude.ai munkamenet- és heti használati korlátodat.**
 
 <p align="center">
-  <img src="docs/flyout.png" alt="Details flyout (illustration with sample data)" height="420">
+  <img src="docs/flyout.png" alt="Details window on Windows" height="400">
   &nbsp;&nbsp;
-  <img src="docs/preview.png" alt="Tray icon and menu (illustration with sample data)" height="420">
+  <img src="docs/linux-details.png" alt="Details window on Linux" height="400">
 </p>
+<p align="center"><sub>Windows · Linux</sub></p>
 
-<p align="center"><a href="../../releases/latest"><b>⬇ Download / Letöltés</b></a></p>
+| | Windows 10/11 | Linux (x86_64) |
+|---|---|---|
+| **Download / Letöltés** | [`ClaudeUsageTray-Setup-1.1.0.exe`](../../releases/latest) (installer / telepítő)<br>[`ClaudeUsageTray.exe`](../../releases/latest) (portable) | [`.deb`](../../releases/latest) · [`AppImage`](../../releases/latest) · [`.tar.gz`](../../releases/latest) |
+| **Desktops / Asztalok** | Windows 10, 11 | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie (X11 + Wayland) |
+| **Verified on / Ellenőrizve** | Windows 11 | Ubuntu 22.04 / 24.04, Debian 12, Fedora 41, Arch Linux |
 
 **🇭🇺 Magyar** · [🇬🇧 English below](#-english)
 
@@ -21,7 +26,7 @@
 ### Mit tud
 
 - **Két sávos tálcaikon:** felül a munkamenet (5 órás ablak), alul a heti használat. Kék 70% alatt, narancs 70% felett, piros 90% felett. Az ikon stílusa a menüből váltható (két sáv / csak munkamenet / csak heti).
-- **Részletek ablak** (bal kattintás az ikonra): munkamenet, heti, **modellenkénti** (Sonnet, Opus) és extra használat, visszaállásig hátralévő idő, **tempójelző** (az időablak hány százaléka telt el) és **előrejelzés**, hogy ilyen tempóval mikor éred el a limitet. Világos/sötét módot a Windows beállítását követi.
+- **Részletek ablak** (bal kattintás az ikonra): munkamenet, heti, **modellenkénti** (Sonnet, Opus) és extra használat, visszaállásig hátralévő idő, **tempójelző** (az időablak hány százaléka telt el) és **előrejelzés**, hogy ilyen tempóval mikor éred el a limitet. Világos/sötét módot az asztali környezet beállítását követi.
 - **Értesítések** 80 / 90 / 100%-nál, **tempó-előrejelzés** és visszaállási értesítés. Ablakonként egyszer jelez, nincs ismétlődő zaj (hiszterézis).
 - **Claude Code tokenstatisztika** a helyi naplókból: ma és az elmúlt 7 nap, modellenként.
 - **Két hitelesítési mód** (a Beállításokban):
@@ -29,7 +34,7 @@
   - **claude.ai süti** (`sessionKey` + `org_id`): ha nem használsz Claude Code-ot.
   - **Automatikus:** OAuth, ha van, különben süti.
 - **Telepítővel vagy telepítés nélkül:** `Program Files`-ba települő telepítő, indítás a Windows-szal (menüből is kapcsolható), egypéldányos futás.
-- Kétnyelvű (magyar/angol) felület, a Windows nyelvét követi, menüből váltható.
+- Kétnyelvű (magyar/angol) felület, a rendszer nyelvét követi, menüből váltható.
 - Hiba esetén az utolsó jó értéket mutatja, és jelzi, hogy az adat régi. Rate limit (429) esetén a `Retry-After` szerint vár.
 
 ### Telepítés
@@ -39,6 +44,24 @@
 3. A tálcaikon jobb gombos menüjében érhető el minden: Részletek, Beállítások, Indítás a Windows-szal, Értesítések, Frissítési időköz, Ikon stílusa, Nyelv.
 
 > Az exe nincs digitálisan aláírva, ezért a Windows SmartScreen figyelmeztethet („További információ → Futtatás mindenképp”). A kiadásnál megadjuk a fájlok SHA256-összegét, és a forráskód teljesen nyílt.
+
+### Linux
+
+Minden mai asztali Linuxon fut (X11 és Wayland), a csomagok Debian 11-en épültek, így a glibc 2.31 vagy újabb elég. Ellenőrizve: Ubuntu 22.04 és 24.04, Debian 12, Fedora 41, Arch Linux. Architektúra: x86_64. ARM64-en (például Raspberry Pi) forrásból futtatható, lásd alább.
+
+| Csomag | Telepítés |
+|---|---|
+| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.1.0_amd64.deb` |
+| **AppImage** (bármelyik disztribúció) | `chmod +x ClaudeUsageTray-1.1.0-x86_64.AppImage && ./ClaudeUsageTray-1.1.0-x86_64.AppImage` |
+| **`.tar.gz`** (root nélkül, felhasználói szintű) | `tar xzf claude-usage-tray-1.1.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.1.0 && ./install.sh` (eltávolítás: `./install.sh --uninstall`) |
+
+- **Tálcaikon:** a program a StatusNotifierItem protokollt használja (KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie, waybar), és X11-es tálcára (XEmbed) is visszaesik. **GNOME-on telepítsd az „AppIndicator and KStatusNotifierItem Support” bővítményt** (`sudo apt install gnome-shell-extension-appindicator`, majd jelentkezz ki és be). Ha egyik tálca sem érhető el, a program a részletek ablakot mutatja, és szól, mit telepíts.
+- **Bal kattintás** az ikonra a részletek ablakot nyitja, a jobb gombos (vagy a GNOME-on bármelyik) menüben minden beállítás elérhető.
+- **Hitelesítés:** a Claude Code bejelentkezését a `~/.claude/.credentials.json` fájlból olvassa (ez az alapértelmezett, nem kell semmit megadni). A süti módban a kulcsot az asztali kulcstartóban (GNOME Keyring, KWallet, Secret Service) tárolja; ha nincs, egy `0600` jogú fájlban (`~/.config/ClaudeUsageTray/config.json`).
+- **Indítás bejelentkezéskor:** a menüből kapcsolható, egy `~/.config/autostart/ClaudeUsageTray.desktop` fájlt hoz létre.
+- **Értesítések:** a `org.freedesktop.Notifications` szolgáltatáson át (minden asztali környezetben).
+- **Diagnosztika:** `claude-usage-tray --diagnose` kiírja, mi működik a rendszeren (Tk, tálca, kulcstartó, bejelentkezés). Hibajelentésnél csatold a kimenetét.
+- Forrásból futtatva (Python 3.9+): `pip install -r requirements-linux.txt`, majd `python3 claude_usage_tray.py` (kell hozzá a `python3-tk`).
 
 ### Melyik hitelesítési módot válaszd?
 
@@ -63,7 +86,7 @@ A program az OAuth-tokent **csak olvassa**, soha nem frissíti: azt a Claude Cod
 ### Átláthatóság és adatvédelem
 
 - **Hálózat:** a program csak az `api.anthropic.com` (OAuth mód) és a `claude.ai` (süti mód) felé kommunikál. A **„Frissítések keresése”** menüpont kattintásra az `api.github.com`-ot kérdezi le; ezen kívül nincs telemetria és nincs automatikus frissítés.
-- **Mit ír a lemezre:** `%APPDATA%\ClaudeUsageTray\` mappába `config.json` (a kulcsok **Windows DPAPI-val titkosítva**, csak a te Windows-fiókodból olvashatók vissza), `settings.json` (beállítások), `claude_usage_tray.log` (napló, kulcsot soha nem tartalmaz), és az **Indítás a Windows-szal** kapcsolóhoz egy `HKCU\…\Run` bejegyzés.
+- **Mit ír a lemezre:** Windowson az `%APPDATA%\ClaudeUsageTray\`, Linuxon a `~/.config/ClaudeUsageTray/` mappába `config.json` (a kulcsok Windowson **DPAPI-val titkosítva**, Linuxon az asztali kulcstartóban vagy `0600` jogú fájlban), `settings.json` (beállítások), `claude_usage_tray.log` (napló, kulcsot soha nem tartalmaz), és az indítás-kapcsolóhoz Windowson egy `HKCU\…\Run` bejegyzés, Linuxon egy `~/.config/autostart` fájl.
 - **Helyi napló:** a tokenstatisztikához a `~/.claude/projects` JSONL fájljait olvassa (csak olvassa). Csak a Claude Code forgalmát látja, a claude.ai csevegést nem.
 - A `sessionKey` süti **lényegében a jelszavad**: ne oszd meg, és képernyőképen se mutasd. Ha kiszivárgott, jelentkezz ki az összes eszközről (Claude → Settings → Account).
 
@@ -93,10 +116,19 @@ Követelmény: Python 3.9+.
 pip install -r requirements.txt
 python claude_usage_tray.py          # futtatás forrásból
 python -m unittest discover tests    # tesztek
-build.bat                            # exe + telepítő (PyInstaller + Inno Setup 6)
+build.bat                            # Windows: exe + telepítő (PyInstaller + Inno Setup 6)
 ```
 
-Szerkezet: a `claude_usage/` csomag moduljai: `sources.py` (adatforrások), `insights.py` (tempó, előrejelzés, értesítések), `localstats.py` (tokenstatisztika), `app.py` (tálca), `ui_*.py` (ablakok), `i18n.py` (szövegek). Forrásból futtatva a beállítások a projektmappába kerülnek.
+Linux-csomagok (Docker kell; Debian 11-ben épít, így minden disztribúción fut):
+
+```
+docker build -f packaging/linux/Dockerfile.build -t cut-build .
+docker run --rm -v "$PWD":/src -v "$PWD/dist-linux":/out cut-build      # .deb, AppImage, .tar.gz
+```
+
+Linux-tesztek (valódi X szerver, D-Bus, tálcagazda és értesítési démon konténerben): `tests/linux/` (`Dockerfile.ubuntu`, `gui_test.py`, `distro_smoke.sh`).
+
+Szerkezet: a `claude_usage/` csomag moduljai: `sources.py` (adatforrások), `insights.py` (tempó, előrejelzés, értesítések), `localstats.py` (tokenstatisztika), `app.py` (alkalmazás), `tray/` (tálca: pystray és saját StatusNotifierItem/D-Bus megvalósítás), `system/` (operációs rendszer-réteg: `windows.py`, `linux.py`), `ui_*.py` (ablakok), `i18n.py` (szövegek). Forrásból futtatva a beállítások a projektmappába kerülnek.
 
 ---
 
@@ -105,7 +137,7 @@ Szerkezet: a `claude_usage/` csomag moduljai: `sources.py` (adatforrások), `ins
 ### Features
 
 - **Two-bar tray icon:** session (5-hour window) on top, weekly usage below. Blue under 70%, orange from 70%, red from 90%. Icon style is switchable (two bars / session only / weekly only).
-- **Details flyout** (left-click the icon): session, weekly, **per-model** (Sonnet, Opus) and extra usage, time until reset, a **pace marker** (how much of the window has elapsed) and a **forecast** of when you will hit the limit at the current rate. Follows the Windows light/dark setting.
+- **Details flyout** (left-click the icon): session, weekly, **per-model** (Sonnet, Opus) and extra usage, time until reset, a **pace marker** (how much of the window has elapsed) and a **forecast** of when you will hit the limit at the current rate. Follows the desktop's light/dark setting.
 - **Notifications** at 80 / 90 / 100%, a **pace forecast** alert and a reset alert. Each fires once per window, no repeated noise (hysteresis).
 - **Claude Code token statistics** from local logs: today and the last 7 days, per model.
 - **Two authentication modes** (in Settings):
@@ -113,7 +145,7 @@ Szerkezet: a `claude_usage/` csomag moduljai: `sources.py` (adatforrások), `ins
   - **claude.ai cookie** (`sessionKey` + `org_id`): if you do not use Claude Code.
   - **Automatic:** OAuth if available, otherwise cookie.
 - **Installer or portable:** installs to `Program Files`, start with Windows (also toggled from the menu), single instance.
-- Bilingual (Hungarian/English) UI, follows the Windows language, switchable from the menu.
+- Bilingual (Hungarian/English) UI, follows the system language, switchable from the menu.
 - On errors it keeps the last good value and flags it as stale. On rate limits (429) it honours `Retry-After`.
 
 ### Installation
@@ -123,6 +155,24 @@ Szerkezet: a `claude_usage/` csomag moduljai: `sources.py` (adatforrások), `ins
 3. Everything is in the tray icon's right-click menu: Details, Settings, Start with Windows, Notifications, Refresh interval, Icon style, Language.
 
 > The exe is not code-signed, so Windows SmartScreen may warn you ("More info → Run anyway"). SHA256 checksums are published with each release and the source is fully open.
+
+### Linux
+
+Runs on every current desktop Linux (X11 and Wayland). The packages are built on Debian 11, so glibc 2.31 or newer is enough. Verified on Ubuntu 22.04 and 24.04, Debian 12, Fedora 41 and Arch Linux. Architecture: x86_64. On ARM64 (for example a Raspberry Pi) run it from source, see below.
+
+| Package | Install |
+|---|---|
+| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.1.0_amd64.deb` |
+| **AppImage** (any distribution) | `chmod +x ClaudeUsageTray-1.1.0-x86_64.AppImage && ./ClaudeUsageTray-1.1.0-x86_64.AppImage` |
+| **`.tar.gz`** (no root, per-user install) | `tar xzf claude-usage-tray-1.1.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.1.0 && ./install.sh` (remove with `./install.sh --uninstall`) |
+
+- **Tray icon:** uses the StatusNotifierItem protocol (KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie, waybar) and falls back to the X11 tray (XEmbed). **On GNOME install the "AppIndicator and KStatusNotifierItem Support" extension** (`sudo apt install gnome-shell-extension-appindicator`, then log out and in). If no tray is available at all, the app shows the details window and tells you what to install.
+- **Left-click** the icon for the details window; every setting is in the right-click menu (on GNOME any click opens the menu).
+- **Authentication:** reads the Claude Code login from `~/.claude/.credentials.json` (the default, nothing to enter). In cookie mode the key is stored in the desktop keyring (GNOME Keyring, KWallet, Secret Service), or, without one, in an owner-only (`0600`) file (`~/.config/ClaudeUsageTray/config.json`).
+- **Start at login:** toggled from the menu; creates `~/.config/autostart/ClaudeUsageTray.desktop`.
+- **Notifications:** through `org.freedesktop.Notifications` (every desktop environment).
+- **Diagnostics:** `claude-usage-tray --diagnose` prints what works on your system (Tk, tray, keyring, login). Attach its output to bug reports.
+- From source (Python 3.9+): `pip install -r requirements-linux.txt`, then `python3 claude_usage_tray.py` (needs `python3-tk`).
 
 ### Which authentication mode?
 
@@ -147,7 +197,7 @@ The OAuth token is **only read**, never refreshed: Claude Code owns it, and rota
 ### Transparency & privacy
 
 - **Network:** the app talks only to `api.anthropic.com` (OAuth mode) and `claude.ai` (cookie mode). The **"Check for updates"** menu item queries `api.github.com` when clicked; there is no telemetry and no automatic update.
-- **Files written:** `%APPDATA%\ClaudeUsageTray\` holds `config.json` (keys **encrypted with Windows DPAPI**, readable only from your Windows account), `settings.json` (preferences) and `claude_usage_tray.log` (never contains keys), plus an `HKCU\…\Run` entry for **Start with Windows**.
+- **Files written:** `%APPDATA%\ClaudeUsageTray\` on Windows and `~/.config/ClaudeUsageTray/` on Linux hold `config.json` (keys **encrypted with DPAPI** on Windows; in the desktop keyring or an owner-only file on Linux), `settings.json` (preferences) and `claude_usage_tray.log` (never contains keys), plus an `HKCU\…\Run` entry (Windows) or a `~/.config/autostart` file (Linux) for the start-at-login switch.
 - **Local logs:** token statistics read (read-only) the JSONL files in `~/.claude/projects`. They only cover Claude Code, not claude.ai chats.
 - The `sessionKey` cookie is **effectively your password**: do not share it or show it in screenshots. If it leaks, sign out of all devices (Claude → Settings → Account).
 
@@ -177,10 +227,19 @@ Requires Python 3.9+.
 pip install -r requirements.txt
 python claude_usage_tray.py          # run from source
 python -m unittest discover tests    # tests
-build.bat                            # exe + installer (PyInstaller + Inno Setup 6)
+build.bat                            # Windows: exe + installer (PyInstaller + Inno Setup 6)
 ```
 
-Layout: the `claude_usage/` package: `sources.py` (data sources), `insights.py` (pace, forecast, alerts), `localstats.py` (token stats), `app.py` (tray), `ui_*.py` (windows), `i18n.py` (strings). When run from source, settings live in the project folder.
+Linux packages (needs Docker; builds on Debian 11 so it runs on every distribution):
+
+```
+docker build -f packaging/linux/Dockerfile.build -t cut-build .
+docker run --rm -v "$PWD":/src -v "$PWD/dist-linux":/out cut-build      # .deb, AppImage, .tar.gz
+```
+
+Linux tests (a real X server, D-Bus, tray host and notification daemon in a container): `tests/linux/` (`Dockerfile.ubuntu`, `gui_test.py`, `distro_smoke.sh`).
+
+Layout: the `claude_usage/` package: `sources.py` (data sources), `insights.py` (pace, forecast, alerts), `localstats.py` (token stats), `app.py` (application), `tray/` (tray: pystray and our own StatusNotifierItem/D-Bus implementation), `system/` (operating-system layer: `windows.py`, `linux.py`), `ui_*.py` (windows), `i18n.py` (strings). When run from source, settings live in the project folder.
 
 ---
 

@@ -6,8 +6,9 @@ could log Claude Code out.
 """
 from __future__ import annotations
 
-import ctypes
 import json
+import os
+import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Optional
 
-from . import __version__
+from . import __version__, system
 from .config import has_cookie_login
 from .model import SESSION_HOURS, WEEK_HOURS, Limit, Usage
 from .paths import claude_dir
@@ -28,6 +29,14 @@ CREDENTIAL_TARGET = "Claude Code-credentials"  # Windows Credential Manager entr
 MAX_BODY = 1_000_000
 MAX_RETRY_AFTER = 3600
 EXPIRY_SKEW_SECONDS = 60
+
+
+def oauth_url() -> str:
+    """The OAuth usage endpoint. Integration tests may point it at a loopback server (never elsewhere)."""
+    override = os.environ.get("CLAUDE_USAGE_TEST_API", "")
+    if re.fullmatch(r"http://127\.0\.0\.1:\d{2,5}", override):
+        return override + "/api/oauth/usage"
+    return OAUTH_URL
 
 
 class UsageError(Exception):
@@ -82,39 +91,10 @@ def parse_credentials(text: str) -> Optional[OAuthCredentials]:
                             plan_label(oauth.get("subscriptionType", ""), oauth.get("rateLimitTier", "")))
 
 
-class _Credential(ctypes.Structure):
-    _fields_ = [("Flags", ctypes.c_uint32), ("Type", ctypes.c_uint32),
-                ("TargetName", ctypes.c_wchar_p), ("Comment", ctypes.c_wchar_p),
-                ("LastWritten", ctypes.c_uint32 * 2), ("BlobSize", ctypes.c_uint32),
-                ("Blob", ctypes.POINTER(ctypes.c_ubyte)), ("Persist", ctypes.c_uint32),
-                ("AttributeCount", ctypes.c_uint32), ("Attributes", ctypes.c_void_p),
-                ("TargetAlias", ctypes.c_wchar_p), ("UserName", ctypes.c_wchar_p)]
-
-
 def _credentials_from_manager() -> Optional[OAuthCredentials]:
-    """Reads Claude Code's entry from the Windows Credential Manager, if present."""
-    try:
-        advapi32 = ctypes.windll.advapi32
-        advapi32.CredReadW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32,
-                                       ctypes.POINTER(ctypes.POINTER(_Credential))]
-        advapi32.CredFree.argtypes = [ctypes.c_void_p]
-        pointer = ctypes.POINTER(_Credential)()
-        if not advapi32.CredReadW(CREDENTIAL_TARGET, 1, 0, ctypes.byref(pointer)):  # 1 = generic
-            return None
-        try:
-            blob = bytes(pointer.contents.Blob[:pointer.contents.BlobSize])
-        finally:
-            advapi32.CredFree(pointer)
-        for encoding in ("utf-8", "utf-16-le"):
-            try:
-                creds = parse_credentials(blob.decode(encoding))
-            except UnicodeDecodeError:
-                continue
-            if creds:
-                return creds
-    except (OSError, AttributeError):
-        pass
-    return None
+    """Claude Code's login from the OS credential store (Windows Credential Manager), if any."""
+    text = system.native_credentials()
+    return parse_credentials(text) if text else None
 
 
 def _credentials_from_file(directory: Optional[Path] = None) -> Optional[OAuthCredentials]:
@@ -220,7 +200,7 @@ def fetch_oauth(creds: Optional[OAuthCredentials] = None) -> Usage:
         raise UsageError("err_oauth_missing")
     if creds.is_expired():
         raise UsageError("err_oauth_expired")
-    request = urllib.request.Request(OAUTH_URL, headers={
+    request = urllib.request.Request(oauth_url(), headers={
         "Accept": "application/json",
         "Authorization": f"Bearer {creds.token}",
         "anthropic-beta": OAUTH_BETA,

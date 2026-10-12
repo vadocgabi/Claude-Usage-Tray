@@ -8,17 +8,16 @@ import webbrowser
 from datetime import datetime, timezone
 from typing import Callable
 
-import pystray
-
-from . import USAGE_PAGE, __version__, autostart, updates
+from . import USAGE_PAGE, __version__, autostart, system, updates
 from .config import ICON_MODES, INTERVALS, load_config, save_preferences
-from .i18n import LANGS, credit_text, resolve_language, tr, units
+from .i18n import LANGS, STRINGS, credit_text, resolve_language, tr, units
 from .icon import make_icon
 from .insights import Alert, AlertTracker, poll_delay
 from .localstats import LocalStats
 from .fmt import duration, local_time, parse_iso
 from .model import Limit, Snapshot
 from .sources import UsageError, fetch_usage, is_configured
+from .tray import SEPARATOR, Item, create_tray
 from .ui_details import DetailsWindow
 from .ui_settings import show_settings
 
@@ -37,8 +36,10 @@ class App:
         self.backoff = 0.0
         self.wake, self.stop = threading.Event(), threading.Event()
         self._open_windows: set = set()
-        self.icon = pystray.Icon("claude_usage", make_icon(None, self.cfg["icon_mode"]), self.t("title"),
-                                 menu=self._build_menu())
+        self.no_tray = False
+        self.tray = create_tray("claude_usage", make_icon(None, self.cfg["icon_mode"]), self.t("title"),
+                                self._build_menu())
+        self.tray.on_unavailable = self._no_tray
 
     # ------------------------------------------------------------ helpers
     def t(self, key: str, **kwargs) -> str:
@@ -53,55 +54,49 @@ class App:
             limit.key, limit.label or limit.key)
 
     def _time(self, limit: Limit, with_day: bool) -> str:
-        return local_time(limit.resets_at, with_day, tr(self.lang, "days") if False else self._days())
-
-    def _days(self) -> list:
-        from .i18n import STRINGS
-        return STRINGS[self.lang]["days"]
+        return local_time(limit.resets_at, with_day, STRINGS[self.lang]["days"])
 
     # ------------------------------------------------------------ menu
-    def _build_menu(self) -> pystray.Menu:
-        item, text = pystray.MenuItem, lambda key: (lambda _: self.t(key))
-        return pystray.Menu(
-            item(lambda _: self._line_session(), None, enabled=False),
-            item(lambda _: self._line_week(), None, enabled=False),
-            item(lambda _: self._line_models(), None, enabled=False, visible=lambda _: self._has_models()),
-            item(lambda _: self._line_updated(), None, enabled=False),
-            pystray.Menu.SEPARATOR,
-            item(text("details"), lambda icon, i: self.open_details(), default=True),
-            item(text("refresh"), lambda icon, i: self.wake.set()),
-            item(text("open_page"), lambda icon, i: webbrowser.open(USAGE_PAGE)),
-            pystray.Menu.SEPARATOR,
-            item(text("settings"), lambda icon, i: self.open_settings()),
-            item(text("autostart"), self._toggle_autostart, checked=lambda i: autostart.is_enabled()),
-            item(text("notifications"), self._toggle_notifications, checked=lambda i: self.cfg["notifications"]),
-            item(text("interval"), pystray.Menu(*[self._interval_item(s) for s in INTERVALS])),
-            item(text("icon_mode"), pystray.Menu(*[self._icon_item(m) for m in ICON_MODES])),
-            item(text("language"), pystray.Menu(*[self._language_item(c) for c in LANGS])),
-            pystray.Menu.SEPARATOR,
-            item(text("check_updates"), lambda icon, i: threading.Thread(target=self._check_updates,
-                                                                          daemon=True).start()),
-            item(lambda _: credit_text(self.lang), None, enabled=False),
-            item(text("quit"), self._quit),
-        )
+    def _build_menu(self) -> list:
+        text = lambda key: (lambda: self.t(key))
+        return [
+            Item(self._line_session), Item(self._line_week),
+            Item(self._line_models, visible=self._has_models), Item(self._line_updated),
+            SEPARATOR,
+            Item(text("details"), self.open_details, default=True),
+            Item(text("refresh"), self.wake.set),
+            Item(text("open_page"), lambda: webbrowser.open(USAGE_PAGE)),
+            SEPARATOR,
+            Item(text("settings"), self.open_settings),
+            Item(text("autostart" if system.NAME == "windows" else "autostart_session"),
+                 self._toggle_autostart, checked=autostart.is_enabled),
+            Item(text("notifications"), self._toggle_notifications, checked=lambda: self.cfg["notifications"]),
+            Item(text("interval"), children=[self._interval_item(s) for s in INTERVALS]),
+            Item(text("icon_mode"), children=[self._icon_item(m) for m in ICON_MODES]),
+            Item(text("language"), children=[self._language_item(c) for c in LANGS]),
+            SEPARATOR,
+            Item(text("check_updates"), lambda: threading.Thread(target=self._check_updates, daemon=True).start()),
+            Item(lambda: credit_text(self.lang)),
+            Item(text("quit"), self._quit),
+        ]
 
-    def _radio(self, label: Callable, selected: Callable, choose: Callable) -> pystray.MenuItem:
-        return pystray.MenuItem(label, lambda icon, i: choose(), checked=lambda i: selected(), radio=True)
+    def _radio(self, label: Callable, selected: Callable, choose: Callable) -> Item:
+        return Item(label, choose, checked=selected, radio=True)
 
-    def _interval_item(self, seconds: int) -> pystray.MenuItem:
-        return self._radio(lambda _: self.t("minutes", n=seconds // 60),
+    def _interval_item(self, seconds: int) -> Item:
+        return self._radio(lambda: self.t("minutes", n=seconds // 60),
                            lambda: self.cfg["interval_seconds"] == seconds,
                            lambda: self._set_pref("interval_seconds", seconds))
 
-    def _icon_item(self, mode: str) -> pystray.MenuItem:
-        return self._radio(lambda _: self.t(f"icon_{mode}"), lambda: self.cfg["icon_mode"] == mode,
+    def _icon_item(self, mode: str) -> Item:
+        return self._radio(lambda: self.t(f"icon_{mode}"), lambda: self.cfg["icon_mode"] == mode,
                            lambda: self._set_pref("icon_mode", mode))
 
-    def _language_item(self, code: str) -> pystray.MenuItem:
+    def _language_item(self, code: str) -> Item:
         def choose() -> None:
             self.lang = code
             self._set_pref("language", code)
-        return self._radio(lambda _: LANGS[code], lambda: self.lang == code, choose)
+        return self._radio(lambda: LANGS[code], lambda: self.lang == code, choose)
 
     def _line_session(self) -> str:
         usage = self.snapshot.usage
@@ -141,20 +136,26 @@ class App:
         if key == "interval_seconds":
             self.wake.set()
 
-    def _toggle_autostart(self, icon, item) -> None:
+    def _toggle_autostart(self) -> None:
         try:
             autostart.set_enabled(not autostart.is_enabled())
         except OSError:
             log.exception("could not change autostart")
-        self.icon.update_menu()
+        self.tray.refresh_menu()
 
-    def _toggle_notifications(self, icon, item) -> None:
+    def _toggle_notifications(self) -> None:
         self._set_pref("notifications", not self.cfg["notifications"])
 
-    def _quit(self, icon, item) -> None:
+    def _quit(self) -> None:
         self.stop.set()
         self.wake.set()
-        icon.stop()
+        self.tray.stop()
+
+    def _no_tray(self) -> None:
+        """No tray icon could be shown (e.g. GNOME without the AppIndicator extension): show the window."""
+        log.warning("no system tray available; showing the details window instead")
+        self.no_tray = True
+        self.open_details()
 
     def _check_updates(self) -> None:
         latest = updates.latest_version()
@@ -165,7 +166,7 @@ class App:
             webbrowser.open(updates.RELEASES_URL)
         else:
             message = self.t("up_to_date", v=__version__)
-        self.icon.notify(message, self.t("title"))
+        self.tray.notify(message, self.t("title"))
 
     def _open_window(self, name: str, target: Callable) -> None:
         """Runs a tkinter window in its own thread; only one window of each kind at a time."""
@@ -223,7 +224,7 @@ class App:
             return
         for alert in self.alerts.check(usage):
             try:
-                self.icon.notify(self._alert_text(alert), self.t("title"))
+                self.tray.notify(self._alert_text(alert), self.t("title"))
             except Exception:
                 log.exception("notification failed")
 
@@ -239,7 +240,7 @@ class App:
         """Pushes the current snapshot to the icon, tooltip, menu and any open window."""
         self.version += 1
         snapshot = self.snapshot
-        self.icon.icon = make_icon(snapshot.usage, self.cfg["icon_mode"], snapshot.stale)
+        self.tray.set_icon(make_icon(snapshot.usage, self.cfg["icon_mode"], snapshot.stale))
         usage = snapshot.usage
         if usage:
             tip = self.t("tip_ok", s=f"{usage.session.pct:.0f}" if usage.session else "-",
@@ -249,8 +250,8 @@ class App:
             tip = self.t("tip_err", e=self._error_text())
         else:
             tip = self.t("title")
-        self.icon.title = tip[:127]
-        self.icon.update_menu()
+        self.tray.set_title(tip[:127])
+        self.tray.refresh_menu()
 
     def _worker(self) -> None:
         while not self.stop.is_set():
@@ -264,4 +265,4 @@ class App:
         threading.Thread(target=self._worker, daemon=True).start()
         if not is_configured(self.cfg):  # first run: ask for the login right away
             self.open_settings()
-        self.icon.run()
+        self.tray.run()

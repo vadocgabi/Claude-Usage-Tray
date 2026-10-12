@@ -1,6 +1,6 @@
 # Claude Usage Tray – fejlesztői leírás
 
-Windows tálcaprogram, ami a **claude.ai** előfizetés használati korlátait mutatja. Felhasználói leírás: `README.md`. Ez a fájl a fejlesztőknek (és a Claude Code-nak) szól.
+Windows és Linux tálcaprogram, ami a **claude.ai** előfizetés használati korlátait mutatja. Felhasználói leírás: `README.md`. Ez a fájl a fejlesztőknek (és a Claude Code-nak) szól.
 
 ## Működés röviden
 
@@ -25,7 +25,21 @@ Windows tálcaprogram, ami a **claude.ai** előfizetés használati korlátait m
 | `version_info.txt` | az exe verzióinformációja |
 | `config.json` | **titkos**: org_id, kulcsok (DPAPI), auth mód. Soha nem kerül Git-be |
 
-Modulok: `sources` (adatforrások, hiba: `UsageError(key, arg, retry_after)`), `model` (`Limit`, `Usage`, `Snapshot`), `insights`, `localstats`, `config` (config.json + settings.json), `dpapi`, `i18n` (HU/EN, kulcsok azonosak, ezt teszt őrzi), `fmt`, `icon`, `autostart`, `updates` (kézi frissítés-ellenőrzés), `ui_common` (design tokenek, világos/sötét, `Bar`), `ui_details` (flyout), `ui_settings`, `app` (tálca + munkaszál), `cli`.
+### Platformréteg és tálca (Windows + Linux)
+
+- **`system/`**: minden operációs rendszer-specifikus hívás itt van, egyetlen interfész mögött (`__init__.py` dokumentálja): adatmappa, titkok védelme (`protect`/`unprotect`), natív Claude-bejelentkezés, autostart, egypéldányos zár, rendszernyelv, sötét mód, ablakstílus, munkaterület. `windows.py` (DPAPI, Credential Manager, registry, DWM), `linux.py` (XDG, keyring/Secret Service vagy `0600` fájl, `.desktop` autostart, `flock`, portal/gsettings/KDE sötét mód, `_NET_WORKAREA`), `fallback.py` (egyéb platform: az app elindul, natív funkciók nélkül).
+- **`tray/`**: semleges menümodell (`Item`) és backendek. Windows: `pystray_backend.py`. Linux: `sni.py` = saját **StatusNotifierItem + com.canonical.dbusmenu** megvalósítás (jeepney), amivel GNOME (AppIndicator bővítmény), KDE, XFCE, Cinnamon, MATE, LXQt, waybar mind működik, csomagolt binárisból is (nem kell GTK/PyGObject). Választás: `linux_select.py` (SNI watcher → XEmbed (pystray `xorg`) → nincs tálca: a részletek ablak jelenik meg). Értesítés Linuxon: `notifier.py` (`org.freedesktop.Notifications`).
+- A `jeepney` blokkoló kapcsolata a váratlan bejövő hívásokat **eldobja**, ha `send_and_get_reply`-ra vár: ezért az `SniTray` egyetlen saját üzenethurkot használ, minden D-Bus műveletet ez a szál végez, a többi szál csak a `_outbox`-ba tesz.
+- Linuxon a részletek ablak normál ablak (a keret nélküli, fókuszvesztésre záródó flyout csak Windowson, `system.FLYOUT_BORDERLESS`).
+- `--diagnose [--out FILE]`: szöveges jelentés a rendszerről (Tk, tálca, kulcstartó, bejelentkezés).
+
+### Linux build és tesztek
+
+- `packaging/linux/build.sh`: Debian 11 (glibc 2.31) konténerben PyInstaller `--onedir`, majd `.tar.gz` (+`install.sh`), `.deb` és AppImage. Futtatás: lásd README „Fejlesztés”.
+- `tests/linux/`: `Dockerfile.ubuntu` (Xvfb, D-Bus, `snixembed` mint valódi harmadik féltől származó SNI-gazda, stalonetray, dunst, gnome-keyring), `gui_test.py` (forgatókönyvek: `sni`, `xembed`, `nowatch`, `nobus`, `firstrun`; hamis loopback OAuth-végpont a `CLAUDE_USAGE_TEST_API` környezeti változóval, csak `http://127.0.0.1:<port>` fogadható el), `distro_smoke.sh` (Ubuntu 22.04/24.04, Debian 12, Fedora 41, Arch: bináris, `.deb`, AppImage, `install.sh`), `keyring_test.sh`.
+- Windowson a Linux-tesztek Dockerben futnak (`docker run -v <repo>:/src:ro ...`); Git-bashban az `MSYS_NO_PATHCONV=1` kell az `/src` útvonalakhoz.
+
+Modulok: `sources` (adatforrások, hiba: `UsageError(key, arg, retry_after)`), `model` (`Limit`, `Usage`, `Snapshot`), `insights`, `localstats`, `config` (config.json + settings.json), `system` (OS-réteg), `tray` (tálca-backendek), `diagnose`, `i18n` (HU/EN, kulcsok azonosak, ezt teszt őrzi), `fmt`, `icon`, `autostart`, `updates` (kézi frissítés-ellenőrzés), `ui_common` (design tokenek, világos/sötét, `Bar`), `ui_details` (flyout), `ui_settings`, `app` (alkalmazás + munkaszál), `cli`.
 
 ## Konvenciók
 
@@ -38,7 +52,7 @@ Modulok: `sources` (adatforrások, hiba: `UsageError(key, arg, retry_after)`), `
 
 ```
 pip install -r requirements.txt pyinstaller
-build.bat        # dist\ClaudeUsageTray.exe, installer\ClaudeUsageTray-Setup-1.0.0.exe
+build.bat        # dist\ClaudeUsageTray.exe, installer\ClaudeUsageTray-Setup-1.1.0.exe
 ```
 
 Az exe-hez `--collect-all curl_cffi` és `--hidden-import pystray._win32` kell. A telepítőhöz Inno Setup 6 (`winget install JRSoftware.InnoSetup`).

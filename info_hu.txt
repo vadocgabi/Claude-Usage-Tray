@@ -1,4 +1,4 @@
-﻿Claude Usage Tray 1.0.0
+﻿Claude Usage Tray 1.1.0
 
 Tálcaprogram, amely a claude.ai előfizetésed használati korlátait mutatja folyamatosan:
 

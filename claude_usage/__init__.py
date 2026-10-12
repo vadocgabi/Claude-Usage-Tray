@@ -1,6 +1,6 @@
 """Claude Usage Tray - shows claude.ai session and weekly limits in the Windows tray."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 APP_NAME = "ClaudeUsageTray"
 AUTHOR = "Vadóc Gábor"
 YEAR = 2026

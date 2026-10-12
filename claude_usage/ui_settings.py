@@ -7,11 +7,11 @@ import tkinter as tk
 import webbrowser
 from typing import Callable
 
-from . import REPO_URL, USAGE_PAGE
+from . import REPO_URL, USAGE_PAGE, system
 from .config import AUTH_MODES, has_cookie_login, save_credentials
 from .i18n import credit_text, tr
 from .sources import UsageError, fetch_usage, read_oauth_credentials
-from .ui_common import button, card, current_theme, entry, font, label, style_window
+from .ui_common import button, card, current_theme, entry, font, label, set_window_icon, style_window
 
 UUID_RE = re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")
 WIDTH = 520
@@ -39,6 +39,7 @@ def show_settings(cfg: dict, lang: str, on_saved: Callable[[dict], None]) -> Non
     root.configure(bg=theme.bg)
     root.resizable(False, False)
     root.attributes("-topmost", True)
+    set_window_icon(root)
     body = tk.Frame(root, bg=theme.bg, padx=18, pady=16)
     body.pack(fill="both")
 
@@ -79,7 +80,7 @@ def show_settings(cfg: dict, lang: str, on_saved: Callable[[dict], None]) -> Non
     help_link.configure(fg=theme.accent)
     help_link.pack(anchor="w", pady=(6, 0))
     help_link.bind("<Button-1>", lambda event: webbrowser.open(USAGE_PAGE))
-    label(login, theme, T("set_hint"), 8, muted=True, wraplength=WIDTH - 70, justify="left").pack(anchor="w")
+    label(login, theme, T("set_hint" if system.NAME == "windows" else "set_hint_linux"), 8, muted=True, wraplength=WIDTH - 70, justify="left").pack(anchor="w")
 
     # ---- status + actions
     status = tk.StringVar()

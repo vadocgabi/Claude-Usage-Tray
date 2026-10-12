@@ -1,0 +1,6 @@
+# Debian 11 (glibc 2.31): binaries built here run on every current Linux distribution.
+FROM python:3.9-bullseye
+RUN (apt-get update && apt-get install -y --no-install-recommends --fix-missing squashfs-tools \
+        && rm -rf /var/lib/apt/lists/*) || echo "squashfs-tools unavailable; appimagetool brings its own"
+WORKDIR /src
+CMD ["bash", "/src/packaging/linux/build.sh"]

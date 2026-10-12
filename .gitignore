@@ -22,3 +22,7 @@ installer_*.bmp
 
 # Local notes
 reddit_post.md
+
+dist-linux/
+tests/linux/out/
+dist-linux-arm64/

@@ -11,6 +11,9 @@ ARCH_TAR="$(uname -m)"
 WORK=/tmp/cut-build
 rm -rf "$WORK" && mkdir -p "$WORK" /out
 
+# Text files that end up in the packages must have LF endings (a Windows checkout may have converted them).
+sed -i 's/$//' packaging/linux/install.sh packaging/linux/claude-usage-tray.desktop
+
 echo "== PyInstaller"
 pip install --no-cache-dir -q pillow pystray python-xlib jeepney keyring curl_cffi pyinstaller
 pyinstaller --noconfirm --clean --onedir --name "$NAME" \

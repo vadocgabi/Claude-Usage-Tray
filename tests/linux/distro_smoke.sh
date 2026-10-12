@@ -22,7 +22,7 @@ fi
 command -v Xvfb >/dev/null && ok "X server available" || bad "X server missing"
 
 # --- portable tar.gz
-mkdir -p /opt/t && tar -xzf /pkg/claude-usage-tray-*-linux-x86_64.tar.gz -C /opt/t
+mkdir -p /opt/t && tar -xzf /pkg/claude-usage-tray-*-linux-*.tar.gz -C /opt/t
 BIN=$(ls -d /opt/t/*/claude-usage-tray/claude-usage-tray)
 VERSION_OUT=$("$BIN" --version 2>&1)
 echo "$VERSION_OUT" | grep -q "Claude Usage Tray" && ok "binary starts: $VERSION_OUT" || bad "binary does not start: $VERSION_OUT"
@@ -48,7 +48,7 @@ sh "$INSTALL_DIR/install.sh" --uninstall >/dev/null 2>&1
 
 # --- .deb on Debian-family systems
 if command -v apt-get >/dev/null; then
-    apt-get install -y -qq /pkg/claude-usage-tray_*_amd64.deb >/dev/null 2>&1 && ok ".deb installs (dependencies resolved)" || bad ".deb install failed"
+    apt-get install -y -qq /pkg/claude-usage-tray_*_*.deb >/dev/null 2>&1 && ok ".deb installs (dependencies resolved)" || bad ".deb install failed"
     command -v claude-usage-tray >/dev/null && claude-usage-tray --version >/dev/null 2>&1 \
         && ok "installed command works" || bad "installed command missing"
     [ -f /usr/share/applications/claude-usage-tray.desktop ] && [ -f /usr/share/icons/hicolor/256x256/apps/claude-usage-tray.png ] \
@@ -58,8 +58,12 @@ if command -v apt-get >/dev/null; then
 fi
 
 # --- AppImage (no FUSE in containers: extract-and-run)
-IMG=$(ls /pkg/*.AppImage)
-APPIMAGE_EXTRACT_AND_RUN=1 "$IMG" --version 2>&1 | grep -q "Claude Usage Tray" && ok "AppImage runs" || bad "AppImage does not run"
+IMG=$(ls /pkg/*.AppImage 2>/dev/null | head -1)
+if [ -n "$IMG" ]; then
+    APPIMAGE_EXTRACT_AND_RUN=1 "$IMG" --version 2>&1 | grep -q "Claude Usage Tray" && ok "AppImage runs" || bad "AppImage does not run"
+else
+    echo "  [SKIP] no AppImage for this architecture"
+fi
 
 echo "== result: $([ $FAIL -eq 0 ] && echo OK || echo FAILED)"
 exit $FAIL

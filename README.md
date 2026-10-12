@@ -2,7 +2,7 @@
 
 > **A Windows and Linux tray app that shows your claude.ai _current session_ and _weekly_ usage limits at a glance.** Unofficial · free · open source · English & Hungarian UI.
 >
-> **Windows és Linux tálcaprogram, ami egy pillantással mutatja a claude.ai munkamenet- és heti használati korlátodat.**
+> **Windows és Linux tálcaprogram, ami mutatja a claude.ai munkamenet- és heti használati korlátodat.**
 
 <p align="center">
   <img src="docs/flyout.png" alt="Details window on Windows" height="400">

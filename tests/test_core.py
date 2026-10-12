@@ -1,5 +1,6 @@
 """Unit tests for the pure logic (no network, no GUI). Run: python -m unittest discover tests"""
 import json
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -208,18 +209,44 @@ class LocalStatsTests(unittest.TestCase):
 
 
 class ConfigTests(unittest.TestCase):
-    def test_credentials_roundtrip_is_encrypted(self):
+    def _roundtrip(self, folder: str):
+        config, settings = Path(folder) / "config.json", Path(folder) / "settings.json"
+        save_credentials({"auth_mode": "cookie", "org_id": "org", "session_key": "sk-secret",
+                          "cf_clearance": ""}, config)
+        save_preferences({"language": "hu", "notifications": False, "interval_seconds": 120,
+                          "icon_mode": "session"}, settings)
+        cfg = load_config(config, settings)
+        self.assertEqual((cfg["session_key"], cfg["org_id"], cfg["auth_mode"]), ("sk-secret", "org", "cookie"))
+        self.assertEqual((cfg["language"], cfg["notifications"], cfg["interval_seconds"], cfg["icon_mode"]),
+                         ("hu", False, 120, "session"))
+        return config
+
+    @unittest.skipUnless(sys.platform == "win32", "DPAPI is Windows-only")
+    def test_credentials_roundtrip_is_encrypted_on_windows(self):
         with tempfile.TemporaryDirectory() as folder:
-            config, settings = Path(folder) / "config.json", Path(folder) / "settings.json"
-            save_credentials({"auth_mode": "cookie", "org_id": "org", "session_key": "sk-secret",
-                              "cf_clearance": ""}, config)
+            config = self._roundtrip(folder)
             self.assertNotIn("sk-secret", config.read_text(encoding="utf-8"))
-            save_preferences({"language": "hu", "notifications": False, "interval_seconds": 120,
-                              "icon_mode": "session"}, settings)
-            cfg = load_config(config, settings)
-            self.assertEqual((cfg["session_key"], cfg["org_id"], cfg["auth_mode"]), ("sk-secret", "org", "cookie"))
-            self.assertEqual((cfg["language"], cfg["notifications"], cfg["interval_seconds"], cfg["icon_mode"]),
-                             ("hu", False, 120, "session"))
+
+    @unittest.skipIf(sys.platform == "win32", "Linux secret storage")
+    def test_credentials_use_the_keyring_when_there_is_one(self):
+        from unittest import mock
+        from claude_usage.system import linux
+        store = {}
+        fake = mock.Mock()
+        fake.set_password.side_effect = lambda service, name, value: store.__setitem__((service, name), value)
+        fake.get_password.side_effect = lambda service, name: store.get((service, name))
+        with mock.patch.object(linux, "_keyring", return_value=fake), tempfile.TemporaryDirectory() as folder:
+            config = self._roundtrip(folder)
+            self.assertNotIn("sk-secret", config.read_text(encoding="utf-8"))
+            self.assertIn("keyring:session_key", config.read_text(encoding="utf-8"))
+
+    @unittest.skipIf(sys.platform == "win32", "Linux secret storage")
+    def test_without_a_keyring_the_config_file_is_owner_only(self):
+        from unittest import mock
+        from claude_usage.system import linux
+        with mock.patch.object(linux, "_keyring", return_value=None), tempfile.TemporaryDirectory() as folder:
+            config = self._roundtrip(folder)
+            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
 
     def test_plain_legacy_config_still_loads_and_bad_values_are_fixed(self):
         with tempfile.TemporaryDirectory() as folder:

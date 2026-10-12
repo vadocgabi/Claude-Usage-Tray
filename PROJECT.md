@@ -52,7 +52,7 @@ Modulok: `sources` (adatforrások, hiba: `UsageError(key, arg, retry_after)`), `
 
 ```
 pip install -r requirements.txt pyinstaller
-build.bat        # dist\ClaudeUsageTray.exe, installer\ClaudeUsageTray-Setup-1.1.0.exe
+build.bat        # dist\ClaudeUsageTray.exe, installer\ClaudeUsageTray-Setup-1.0.0.exe
 ```
 
 Az exe-hez `--collect-all curl_cffi` és `--hidden-import pystray._win32` kell. A telepítőhöz Inno Setup 6 (`winget install JRSoftware.InnoSetup`).

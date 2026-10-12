@@ -1,6 +1,6 @@
 ; Claude Usage Tray installer (Inno Setup 6) - Vadóc Gábor, 2026
 #define AppName "Claude Usage Tray"
-#define AppVersion "1.1.0"
+#define AppVersion "1.0.0"
 #define AppExe "ClaudeUsageTray.exe"
 
 [Setup]

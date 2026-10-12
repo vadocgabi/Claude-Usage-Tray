@@ -1,5 +1,5 @@
 @echo off
-rem Builds dist\ClaudeUsageTray.exe and installer\ClaudeUsageTray-Setup-1.1.0.exe (Python 3.9+ on PATH).
+rem Builds dist\ClaudeUsageTray.exe and installer\ClaudeUsageTray-Setup-1.0.0.exe (Python 3.9+ on PATH).
 cd /d "%~dp0"
 python -m pip install -r requirements.txt pyinstaller || exit /b 1
 python -m unittest discover tests || exit /b 1
@@ -17,4 +17,4 @@ if exist "%ISCC%" ("%ISCC%" installer.iss) else echo Inno Setup not found - inst
 echo.
 echo Checksums (SHA256):
 certutil -hashfile dist\ClaudeUsageTray.exe SHA256 | findstr /v ":"
-certutil -hashfile installer\ClaudeUsageTray-Setup-1.1.0.exe SHA256 | findstr /v ":"
+certutil -hashfile installer\ClaudeUsageTray-Setup-1.0.0.exe SHA256 | findstr /v ":"

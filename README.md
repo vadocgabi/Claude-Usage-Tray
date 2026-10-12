@@ -13,7 +13,7 @@
 
 | | Windows 10/11 | Linux (x86_64 · ARM64) |
 |---|---|---|
-| **Download / Letöltés** | [`ClaudeUsageTray-Setup-1.1.0.exe`](../../releases/latest) (installer / telepítő)<br>[`ClaudeUsageTray.exe`](../../releases/latest) (portable) | [`.deb`](../../releases/latest) · [`AppImage`](../../releases/latest) · [`.tar.gz`](../../releases/latest) |
+| **Download / Letöltés** | [`ClaudeUsageTray-Setup-1.0.0.exe`](../../releases/latest) (installer / telepítő)<br>[`ClaudeUsageTray.exe`](../../releases/latest) (portable) | [`.deb`](../../releases/latest) · [`AppImage`](../../releases/latest) · [`.tar.gz`](../../releases/latest) |
 | **Desktops / Asztalok** | Windows 10, 11 | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie (X11 + Wayland) |
 | **Verified on / Ellenőrizve** | Windows 11 | Ubuntu 22.04 / 24.04, Debian 12, Fedora 41, Arch Linux |
 
@@ -51,9 +51,9 @@ Minden mai asztali Linuxon fut (X11 és Wayland), a csomagok Debian 11-en épül
 
 | Csomag | Telepítés |
 |---|---|
-| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.1.0_amd64.deb` (ARM64: `_arm64.deb`) |
-| **AppImage** (bármelyik disztribúció, x86_64) | `chmod +x ClaudeUsageTray-1.1.0-x86_64.AppImage && ./ClaudeUsageTray-1.1.0-x86_64.AppImage` |
-| **`.tar.gz`** (root nélkül, felhasználói szintű) | `tar xzf claude-usage-tray-1.1.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.1.0 && ./install.sh` (eltávolítás: `./install.sh --uninstall`) |
+| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.0.0_amd64.deb` (ARM64: `_arm64.deb`) |
+| **AppImage** (bármelyik disztribúció, x86_64) | `chmod +x ClaudeUsageTray-1.0.0-x86_64.AppImage && ./ClaudeUsageTray-1.0.0-x86_64.AppImage` |
+| **`.tar.gz`** (root nélkül, felhasználói szintű) | `tar xzf claude-usage-tray-1.0.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.0.0 && ./install.sh` (eltávolítás: `./install.sh --uninstall`) |
 
 - **Tálcaikon:** a program a StatusNotifierItem protokollt használja (KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie, waybar), és X11-es tálcára (XEmbed) is visszaesik. **GNOME-on telepítsd az „AppIndicator and KStatusNotifierItem Support” bővítményt** (`sudo apt install gnome-shell-extension-appindicator`, majd jelentkezz ki és be). Ha egyik tálca sem érhető el, a program a részletek ablakot mutatja, és szól, mit telepíts.
 - **Bal kattintás** az ikonra a részletek ablakot nyitja, a jobb gombos (vagy a GNOME-on bármelyik) menüben minden beállítás elérhető.
@@ -162,9 +162,9 @@ Runs on every current desktop Linux (X11 and Wayland). The packages are built on
 
 | Package | Install |
 |---|---|
-| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.1.0_amd64.deb` (ARM64: `_arm64.deb`) |
-| **AppImage** (any distribution, x86_64) | `chmod +x ClaudeUsageTray-1.1.0-x86_64.AppImage && ./ClaudeUsageTray-1.1.0-x86_64.AppImage` |
-| **`.tar.gz`** (no root, per-user install) | `tar xzf claude-usage-tray-1.1.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.1.0 && ./install.sh` (remove with `./install.sh --uninstall`) |
+| **`.deb`** (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./claude-usage-tray_1.0.0_amd64.deb` (ARM64: `_arm64.deb`) |
+| **AppImage** (any distribution, x86_64) | `chmod +x ClaudeUsageTray-1.0.0-x86_64.AppImage && ./ClaudeUsageTray-1.0.0-x86_64.AppImage` |
+| **`.tar.gz`** (no root, per-user install) | `tar xzf claude-usage-tray-1.0.0-linux-x86_64.tar.gz && cd claude-usage-tray-1.0.0 && ./install.sh` (remove with `./install.sh --uninstall`) |
 
 - **Tray icon:** uses the StatusNotifierItem protocol (KDE Plasma, XFCE, Cinnamon, MATE, LXQt, Budgie, waybar) and falls back to the X11 tray (XEmbed). **On GNOME install the "AppIndicator and KStatusNotifierItem Support" extension** (`sudo apt install gnome-shell-extension-appindicator`, then log out and in). If no tray is available at all, the app shows the details window and tells you what to install.
 - **Left-click** the icon for the details window; every setting is in the right-click menu (on GNOME any click opens the menu).
